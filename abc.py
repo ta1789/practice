@@ -302,6 +302,35 @@ def extract_credit_card_from_image(image_path: str, output_file: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error extracting credit card number: {str(e)}")
 
+# Task Execution Functions
+def create_index_for_markdown_files():
+    docs_dir = Path("C:/data/docs")
+    index = {}
+
+    # Iterate through all markdown files in the /data/docs/ directory and its subdirectories
+    for md_file in docs_dir.rglob("*.md"):
+        with open(md_file, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+
+        # Find the first H1 (line starting with '#')
+        title = None
+        for line in lines:
+            if line.startswith("# "):  # H1 header starts with "# "
+                title = line.strip("# ").strip()  # Remove the '#' and any leading/trailing whitespace
+                break
+
+        # If we found a title, add it to the index
+        if title:
+            # Use the filename without the /data/docs/ prefix
+            file_name = md_file.relative_to(docs_dir).as_posix()
+            index[file_name] = title
+
+    # Write the index to /data/docs/index.json
+    with open(docs_dir / "index.json", "w", encoding="utf-8") as index_file:
+        json.dump(index, index_file, indent=4, ensure_ascii=False)
+
+    return "Index created successfully at /data/docs/index.json"
+
 @app.get("/run")
 def run_task(task: str = Query(..., description="Task description")):
     """Execute a task based on LLM parsing"""
