@@ -302,6 +302,46 @@ def extract_credit_card_from_image(image_path: str, output_file: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error extracting credit card number: {str(e)}")
 
+@app.get("/run")
+def run_task(task: str = Query(..., description="Task description")):
+    """Execute a task based on LLM parsing"""
+    try:
+        print("Received Request:", task)
+        task_info = parse_task_with_llm(task)
+        print("Parsed Task:", task_info)
+
+        operation = task_info.get("operation")
+        file_path = task_info.get("file", "")
+        print(file_path)
+        params = task_info.get("parameters", {})
+
+        task_mapping = {
+            "A1": lambda: install_uv_and_run_script(params.get("email", "default@example.com")),
+            "A2": lambda: format_markdown_file(file_path),
+            "A3": lambda: count_days(file_path, params.get("output_file", "/data/output.txt"),params.get("day", "monday")),
+            "A4": lambda: sort_contacts(file_path, params.get("output_file", "/data/sorted_contacts.json")),
+            "A5": lambda: extract_recent_logs(file_path, params.get("output_file", "/data/logs-recent.txt")),
+            "A6": lambda: create_index_for_markdown_files(),
+            "A7": lambda: extract_sender_email_from_email(file_path, params.get("output_file", "/data/email-sender.txt")),
+            "A8": lambda: extract_credit_card_from_image(file_path, params.get("output_file", "/data/credit-card.txt")),
+            "A9": lambda: find_most_similar_comments(
+                file_path=params.get("file_path", "C:/data/comments.txt"),
+                output_file=params.get("output_file", "C:/data/comments-similar.txt")
+            ),
+            "A10": lambda: calculate_gold_ticket_sales(params.get("db_path", "C:/data/ticket-sales.db"),params.get("output", "C:/data/ticket-sales-gold.txt")),
+        }
+
+        if operation in task_mapping:
+            result = task_mapping[operation]()
+            return {"message": f"Task {operation} executed successfully.", "result": result or "Success"}
+
+        raise HTTPException(status_code=400, detail=f"Invalid task operation: {operation}")
+
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Run FastAPI server
 if __name__ == "__main__":
     import uvicorn
